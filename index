@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stok & Raf Takip Sistemi</title>
+<style>
+  :root { --primary: #3b82f6; --primary-hover: #2563eb; --success: #10b981; --success-hover: #059669; --danger: #ef4444; --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #64748b; --border: #cbd5e1; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 950px; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--text); }
+  h1 { text-align: center; margin-bottom: 1.5rem; color: var(--text); }
+  .card { background: var(--card); padding: 1.5rem; border-radius: 12px; box-shadow: 0 3px 10px rgba(0,0,0,0.08); margin-bottom: 1.2rem; }
+  
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .field label { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; display: block; font-weight: 500; }
+  input, select { width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: #fff; transition: border 0.2s; }
+  input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+  
+  button { padding: 0.7rem; background: var(--primary); color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: 500; transition: background 0.2s; }
+  button:hover { background: var(--primary-hover); }
+  .btn-add { background: var(--success); width: 100%; margin-top: 6px; padding: 0.5rem; font-size: 0.85rem; }
+  .btn-add:hover { background: var(--success-hover); }
+  .btn-save { margin-top: 15px; width: 100%; padding: 0.85rem; font-size: 1rem; background: var(--primary); }
+  
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.9rem; color: var(--muted); }
+  
+  .table-wrap { overflow-x: auto; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+  th { background: #f1f5f9; color: #334155; font-weight: 600; }
+  .raf-badge { background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-weight: 500; font-family: monospace; font-size: 0.85rem; }
+  .actions { display: flex; gap: 6px; justify-content: center; }
+  .btn-del { background: var(--danger); width: auto; padding: 5px 10px; font-size: 0.8rem; border-radius: 6px; }
+  .btn-del:hover { background: #dc2626; }
+  
+  #msg { text-align: center; font-weight: 500; min-height: 1.5rem; margin-top: 10px; color: var(--text); }
+  
+  @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>📦 Stok & Raf Takip Sistemi</h1>
+
+<div class="card">
+  <div class="form-grid">
+    <!-- SOL SÜTUN -->
+    <div class="col">
+      <div class="field">
+        <label>Ürün Adı</label>
+        <input list="adList" id="ad" placeholder="Örn: Vida 5mm, Kablo 2m" autocomplete="off">
+        <datalist id="adList"></datalist>
+      </div>
+      <div class="field">
+        <label>Ürün Kodu / No</label>
+        <input list="kodList" id="kod" placeholder="Örn: V-005, K-200" autocomplete="off">
+        <datalist id="kodList"></datalist>
+      </div>
+      <div class="field">
+        <label>Raf / Bölüm</label>
+        <select id="raf"><option value="">Raf Seç</option></select>
+        <button class="btn-add" onclick="yeniEkle('raf')">📍 Yeni Raf Tanımla</button>
+      </div>
+      <div class="field">
+        <label>Miktar</label>
+        <input type="number" id="miktar" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <!-- SAĞ SÜTUN -->
+    <div class="col">
+      <div class="field">
+        <label>Kategori</label>
+        <select id="kategori"><option value="">Kategori Seç</option></select>
+        <button class="btn-add" onclick="yeniEkle('kategori')">📁 Yeni Kategori Oluştur</button>
+      </div>
+      <div class="field">
+        <label>Marka</label>
+        <select id="marka"><option value="">Marka Seç</option></select>
+        <button class="btn-add" onclick="yeniEkle('marka')">🏷️ Yeni Marka Oluştur</button>
+      </div>
+      <div class="field">
+        <label>Fiyat (₺)</label>
+        <input type="number" id="fiyat" placeholder="Boş bırakılabilir" step="0.01" min="0">
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-save" onclick="ekle()">➕ Ürünü Kaydet</button>
+  <div class="check-row">
+    <input type="checkbox" id="formTemizle" checked>
+    <label for="formTemizle">Kayıt sonrası form alanlarını sıfırla</label>
+  </div>
+</div>
+
+<div class="card">
+  <input type="text" id="ara" placeholder="🔍 Ad, Kod, Raf, Marka veya Kategori ile ara..." oninput="listele()" style="margin-bottom: 8px;">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Kod</th><th>Ürün</th><th>📍 Raf</th><th>Kategori</th><th>Marka</th><th>Miktar</th><th>Fiyat</th><th>İşlem</th></tr>
+      </thead>
+      <tbody id="liste"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="msg"></div>
+
+<script>
+let stok = JSON.parse(localStorage.getItem('stok')) || [];
+let markalar = JSON.parse(localStorage.getItem('markalar')) || ['Genel'];
+let kategoriler = JSON.parse(localStorage.getItem('kategoriler')) || ['Genel'];
+let rafGecmisi = JSON.parse(localStorage.getItem('rafGecmisi')) || [];
+let adGecmisi = JSON.parse(localStorage.getItem('adGecmisi')) || [];
+let kodGecmisi = JSON.parse(localStorage.getItem('kodGecmisi')) || [];
+let nextId = stok.length ? Math.max(...stok.map(x => x.id)) + 1 : 1;
+
+function kaydet() {
+  localStorage.setItem('stok', JSON.stringify(stok));
+  localStorage.setItem('markalar', JSON.stringify(markalar));
+  localStorage.setItem('kategoriler', JSON.stringify(kategoriler));
+  localStorage.setItem('rafGecmisi', JSON.stringify(rafGecmisi));
+  localStorage.setItem('adGecmisi', JSON.stringify(adGecmisi));
+  localStorage.setItem('kodGecmisi', JSON.stringify(kodGecmisi));
+  listele();
+}
+
+function dropdownGuncelle() {
+  document.getElementById('raf').innerHTML = '<option value="">Raf Seç</option>' + rafGecmisi.map(r => `<option value="${r}">${r}</option>`).join('');
+  document.getElementById('kategori').innerHTML = '<option value="">Kategori Seç</option>' + kategoriler.map(k => `<option value="${k}">${k}</option>`).join('');
+  document.getElementById('marka').innerHTML = '<option value="">Marka Seç</option>' + markalar.map(m => `<option value="${m}">${m}</option>`).join('');
+  document.getElementById('adList').innerHTML = adGecmisi.map(a => `<option value="${a}">`).join('');
+  document.getElementById('kodList').innerHTML = kodGecmisi.map(k => `<option value="${k}">`).join('');
+}
+
+function yeniEkle(tip) {
+  const yeni = prompt(`Yeni ${tip} kodu/adı:`);
+  if (yeni && yeni.trim()) {
+    const deger = yeni.trim();
+    if (tip === 'marka' && !markalar.includes(deger)) { markalar.push(deger); document.getElementById('marka').value = deger; }
+    else if (tip === 'kategori' && !kategoriler.includes(deger)) { kategoriler.push(deger); document.getElementById('kategori').value = deger; }
+    else if (tip === 'raf' && !rafGecmisi.includes(deger)) { rafGecmisi.push(deger); document.getElementById('raf').value = deger; }
+    kaydet();
+    dropdownGuncelle();
+  }
+}
+
+function ekle() {
+  const ad = document.getElementById('ad').value.trim();
+  const kod = document.getElementById('kod').value.trim();
+  const raf = document.getElementById('raf').value;
+  const marka = document.getElementById('marka').value;
+  const kategori = document.getElementById('kategori').value;
+  const miktar = parseInt(document.getElementById('miktar').value);
+  const fiyatVal = document.getElementById('fiyat').value;
+  const fiyat = fiyatVal ? parseFloat(fiyatVal) : null;
+
+  if (!ad || !kod || isNaN(miktar)) return showMsg('⚠️ Ürün adı, kodu ve miktar zorunludur.');
+
+  if (!adGecmisi.includes(ad)) adGecmisi.push(ad);
+  if (!kodGecmisi.includes(kod)) kodGecmisi.push(kod);
+  if (raf && !rafGecmisi.includes(raf)) rafGecmisi.push(raf);
+
+  stok.push({ id: nextId++, ad, kod, raf, marka, kategori, miktar, fiyat });
+  showMsg('✅ Ürün başarıyla kaydedildi.');
+
+  const temizle = document.getElementById('formTemizle').checked;
+  if (temizle) {
+    document.getElementById('ad').value = '';
+    document.getElementById('kod').value = '';
+    document.getElementById('miktar').value = '';
+    document.getElementById('fiyat').value = '';
+    document.getElementById('raf').value = '';
+    document.getElementById('marka').value = '';
+    document.getElementById('kategori').value = '';
+  } else {
+    document.getElementById('miktar').value = '';
+    document.getElementById('fiyat').value = '';
+  }
+
+  dropdownGuncelle();
+  kaydet();
+}
+
+function listele() {
+  const arama = document.getElementById('ara').value.toLowerCase();
+  const tbody = document.getElementById('liste');
+  tbody.innerHTML = '';
+
+  const filtrelenmis = arama ? stok.filter(x => 
+    x.ad.toLowerCase().includes(arama) || 
+    x.kod.toLowerCase().includes(arama) || 
+    (x.raf && x.raf.toLowerCase().includes(arama)) || 
+    (x.marka && x.marka.toLowerCase().includes(arama)) || 
+    (x.kategori && x.kategori.toLowerCase().includes(arama))
+  ) : stok;
+
+  filtrelenmis.forEach(x => {
+    const fiyatTxt = x.fiyat !== null ? `${x.fiyat.toFixed(2)} ₺` : '-';
+    const rafHtml = x.raf ? `<span class="raf-badge">${x.raf}</span>` : '-';
+    tbody.innerHTML += `
+      <tr>
+        <td>${x.kod}</td>
+        <td>${x.ad}</td>
+        <td>${rafHtml}</td>
+        <td>${x.kategori || '-'}</td>
+        <td>${x.marka || '-'}</td>
+        <td><input type="number" value="${x.miktar}" style="width:70px; padding:4px; border:1px solid var(--border); border-radius:4px;" onchange="guncelle(${x.id}, this.value)"></td>
+        <td>${fiyatTxt}</td>
+        <td class="actions"><button class="btn-del" onclick="sil(${x.id})">🗑️ Sil</button></td>
+      </tr>`;
+  });
+}
+
+function guncelle(id, yeniMiktar) {
+  const urun = stok.find(x => x.id === id);
+  if (urun) { urun.miktar = parseInt(yeniMiktar) || 0; showMsg('🔄 Stok güncellendi.'); kaydet(); }
+}
+
+function sil(id) {
+  if (!confirm('Bu ürünü silmek istediğinize emin misiniz?')) return;
+  stok = stok.filter(x => x.id !== id);
+  showMsg('🗑️ Ürün silindi.');
+  kaydet();
+}
+
+function showMsg(txt) { const el = document.getElementById('msg'); el.textContent = txt; setTimeout(() => el.textContent = '', 2500); }
+
+dropdownGuncelle();
+listele();
+</script>
+</body>
+</html>
